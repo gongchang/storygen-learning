@@ -1,0 +1,41 @@
+
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/storygen/storygen-backend:${SHORT_SHA}'
+      - '.'
+    dir: 'backend'
+
+  # Push the Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/storygen/storygen-backend:${SHORT_SHA}'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'storygen-backend'
+      - '--image=us-central1-docker.pkg.dev/${PROJECT_ID}/storygen/storygen-backend:${SHORT_SHA}'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--set-env-vars=FRONTEND_URL=${_FRONTEND_URL}'
+      - '--set-secrets=GOOGLE_API_KEY=storygen-google-api-key:latest'
+
+images:
+  - 'us-central1-docker.pkg.dev/${PROJECT_ID}/storygen/storygen-backend:${SHORT_SHA}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# Substitution variables
+substitutions:
+  _FRONTEND_URL: 'https://storygen-frontend-xxxx.a.run.app' # Default value, can be overridden
